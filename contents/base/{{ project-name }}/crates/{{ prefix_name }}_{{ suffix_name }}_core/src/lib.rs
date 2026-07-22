@@ -10,8 +10,9 @@ use axum::{
     routing::{get, post},
 };
 use settings::CoreSettings;
+use metrics_exporter_prometheus::PrometheusBuilder;
 use {{ prefix_name }}_{{ suffix_name }}_schema::{
-    {{ PrefixName }}{{ SuffixName }}Schema, MutationRoot, QueryRoot,
+    {{ PrefixName }}{{ SuffixName }}Schema, MutationRoot, QueryRoot, Store,
 };
 {% if persistence ~= 'None' %}use {{ prefix_name }}_{{ suffix_name }}_persistence::PersistencePool;
 {% endif %}{% if cache ~= 'None' %}use {{ prefix_name }}_{{ suffix_name }}_cache::CachePool;
@@ -38,11 +39,30 @@ impl {{ PrefixName }}{{ SuffixName }}Core {
     /// Management router — health probes and metrics on management_port.
     /// Separate from the service router so Kubernetes network policy can restrict
     /// probe traffic independently from GraphQL traffic.
+    ///
+    /// Installs the process-global Prometheus recorder (call once, at startup).
     pub fn management_router() -> Router {
+        let metrics_handle = PrometheusBuilder::new()
+            .install_recorder()
+            .expect("failed to install Prometheus metrics recorder");
+
+        // Seed a build-info family so /metrics is meaningful from the first scrape.
+        metrics::gauge!(
+            "{{ prefix_name }}_{{ suffix_name }}_build_info",
+            "version" => env!("CARGO_PKG_VERSION")
+        )
+        .set(1.0);
+
         Router::new()
             .route("/health/readiness", get(health_readiness))
             .route("/health/liveness", get(health_liveness))
-            .route("/metrics", get(metrics_handler))
+            .route(
+                "/metrics",
+                get(move || {
+                    let handle = metrics_handle.clone();
+                    async move { metrics_handler(handle).await }
+                }),
+            )
     }
 }
 
@@ -81,7 +101,8 @@ impl Builder {
 
 {% endif %}    pub async fn build(self) -> Result<{{ PrefixName }}{{ SuffixName }}Core> {
         let schema = Schema::build(QueryRoot, MutationRoot, EmptySubscription)
-{% if persistence ~= 'None' %}            .data(self.db)
+{% if persistence ~= 'None' %}            .data(Store::new(self.db))
+{% else %}            .data(Store::default())
 {% endif %}{% if cache ~= 'None' %}            .data(self.cache.expect("cache must be initialized with with_cache()"))
 {% endif %}{% if messaging ~= 'None' %}            .data(self.messaging.expect("messaging must be initialized with with_messaging()"))
 {% endif %}            .finish();
@@ -112,12 +133,11 @@ async fn health_liveness() -> impl IntoResponse {
     (StatusCode::OK, axum::Json(serde_json::json!({"status": "ok"})))
 }
 
-/// Prometheus metrics endpoint.
-async fn metrics_handler() -> impl IntoResponse {
-    // TODO: wire up metrics-exporter-prometheus handle and return rendered text.
+/// Prometheus metrics endpoint: renders everything the installed recorder has collected.
+async fn metrics_handler(handle: metrics_exporter_prometheus::PrometheusHandle) -> impl IntoResponse {
     (
         StatusCode::OK,
         [(header::CONTENT_TYPE, "text/plain; version=0.0.4; charset=utf-8")],
-        "# Prometheus metrics\n",
+        handle.render(),
     )
 }

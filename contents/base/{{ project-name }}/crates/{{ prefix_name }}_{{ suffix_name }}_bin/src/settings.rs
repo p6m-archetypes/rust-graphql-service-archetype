@@ -32,6 +32,37 @@ impl Settings {
 
         figment = figment.merge(Env::prefixed("APP_").split("__"));
 
+        // Platform environment contract: the deployment manifests inject the server ports as
+        // bare variables (SERVER_PORT / MANAGEMENT_PORT). Layer them onto the settings tree so
+        // the platform's names are honored; APP_-prefixed vars keep working for local overrides.
+        figment = figment.merge(
+            Env::raw()
+                .filter(|key| key == "SERVER_PORT" || key == "MANAGEMENT_PORT")
+                .map(|key| {
+                    if key == "SERVER_PORT" {
+                        "server.port".into()
+                    } else {
+                        "server.management_port".into()
+                    }
+                })
+                .split("."),
+        );
+{% if persistence ~= 'None' %}
+        // The database contract arrives as discrete DB_* vars; assemble the connection URL
+        // the persistence layer expects.
+        if let (Ok(host), Ok(port), Ok(user), Ok(pass), Ok(db)) = (
+            std::env::var("DB_HOST"),
+            std::env::var("DB_PORT"),
+            std::env::var("DB_USERNAME"),
+            std::env::var("DB_PASSWORD"),
+            std::env::var("DB_DBNAME"),
+        ) {
+            figment = figment.merge(Serialized::default(
+                "persistence.url",
+                format!("{% if persistence == 'MySQL' %}mysql{% else %}postgres{% endif %}://{user}:{pass}@{host}:{port}/{db}"),
+            ));
+        }
+{% endif %}
         Ok(figment.extract()?)
     }
 }
