@@ -1,23 +1,28 @@
 pub mod settings;
 
 use anyhow::Result;
-use async_graphql::{EmptySubscription, Schema, http::GraphiQLSource};
+use async_graphql::{http::GraphiQLSource, EmptySubscription, Schema};
 use axum::{
-    Router,
     extract::State,
     http::{header, StatusCode},
     response::{Html, IntoResponse},
     routing::{get, post},
+    Router,
 };
-use settings::CoreSettings;
 use metrics_exporter_prometheus::PrometheusBuilder;
-use {{ prefix_name }}_{{ suffix_name }}_schema::{
-    {{ PrefixName }}{{ SuffixName }}Schema, MutationRoot, QueryRoot, Store,
-};
-{% if persistence ~= 'None' %}use {{ prefix_name }}_{{ suffix_name }}_persistence::PersistencePool;
-{% endif %}{% if cache ~= 'None' %}use {{ prefix_name }}_{{ suffix_name }}_cache::CachePool;
-{% endif %}{% if messaging ~= 'None' %}use {{ prefix_name }}_{{ suffix_name }}_messaging::MessagingClient;
+use settings::CoreSettings;
+
+{% if cache ~= 'None' %}
+use {{ prefix_name }}_{{ suffix_name }}_cache::CachePool;
 {% endif %}
+{% if messaging ~= 'None' %}
+use {{ prefix_name }}_{{ suffix_name }}_messaging::MessagingClient;
+{% endif %}
+{% if persistence ~= 'None' %}
+use {{ prefix_name }}_{{ suffix_name }}_persistence::PersistencePool;
+{% endif %}
+use {{ prefix_name }}_{{ suffix_name }}_schema::{{ "{" }}{{ PrefixName }}{{ SuffixName }}Schema, MutationRoot, QueryRoot, Store};
+
 pub struct {{ PrefixName }}{{ SuffixName }}Core {
     schema: {{ PrefixName }}{{ SuffixName }}Schema,
     #[allow(dead_code)]
@@ -67,20 +72,32 @@ impl {{ PrefixName }}{{ SuffixName }}Core {
 }
 
 pub struct Builder {
-{% if persistence ~= 'None' %}    db: PersistencePool,
-{% endif %}{% if cache ~= 'None' %}    cache: Option<CachePool>,
-{% endif %}{% if messaging ~= 'None' %}    messaging: Option<MessagingClient>,
-{% endif %}    settings: CoreSettings,
+{% if persistence ~= 'None' %}
+    db: PersistencePool,
+{% endif %}
+{% if cache ~= 'None' %}
+    cache: Option<CachePool>,
+{% endif %}
+{% if messaging ~= 'None' %}
+    messaging: Option<MessagingClient>,
+{% endif %}
+    settings: CoreSettings,
 }
 
 impl Builder {
     #[allow(clippy::new_without_default)]
     pub fn new({% if persistence ~= 'None' %}db: PersistencePool{% endif %}) -> Self {
         Self {
-{% if persistence ~= 'None' %}            db,
-{% endif %}{% if cache ~= 'None' %}            cache: None,
-{% endif %}{% if messaging ~= 'None' %}            messaging: None,
-{% endif %}            settings: CoreSettings::default(),
+{% if persistence ~= 'None' %}
+            db,
+{% endif %}
+{% if cache ~= 'None' %}
+            cache: None,
+{% endif %}
+{% if messaging ~= 'None' %}
+            messaging: None,
+{% endif %}
+            settings: CoreSettings::default(),
         }
     }
 
@@ -89,23 +106,34 @@ impl Builder {
         self
     }
 
-{% if cache ~= 'None' %}    pub fn with_cache(mut self, cache: CachePool) -> Self {
+{% if cache ~= 'None' %}
+    pub fn with_cache(mut self, cache: CachePool) -> Self {
         self.cache = Some(cache);
         self
     }
 
-{% endif %}{% if messaging ~= 'None' %}    pub fn with_messaging(mut self, messaging: MessagingClient) -> Self {
+{% endif %}
+{% if messaging ~= 'None' %}
+    pub fn with_messaging(mut self, messaging: MessagingClient) -> Self {
         self.messaging = Some(messaging);
         self
     }
 
-{% endif %}    pub async fn build(self) -> Result<{{ PrefixName }}{{ SuffixName }}Core> {
+{% endif %}
+    pub async fn build(self) -> Result<{{ PrefixName }}{{ SuffixName }}Core> {
         let schema = Schema::build(QueryRoot, MutationRoot, EmptySubscription)
-{% if persistence ~= 'None' %}            .data(Store::new(self.db))
-{% else %}            .data(Store::default())
-{% endif %}{% if cache ~= 'None' %}            .data(self.cache.expect("cache must be initialized with with_cache()"))
-{% endif %}{% if messaging ~= 'None' %}            .data(self.messaging.expect("messaging must be initialized with with_messaging()"))
-{% endif %}            .finish();
+{% if persistence ~= 'None' %}
+            .data(Store::new(self.db))
+{% else %}
+            .data(Store::default())
+{% endif %}
+{% if cache ~= 'None' %}
+            .data(self.cache.expect("cache must be initialized with with_cache()"))
+{% endif %}
+{% if messaging ~= 'None' %}
+            .data(self.messaging.expect("messaging must be initialized with with_messaging()"))
+{% endif %}
+            .finish();
 
         Ok({{ PrefixName }}{{ SuffixName }}Core {
             schema,

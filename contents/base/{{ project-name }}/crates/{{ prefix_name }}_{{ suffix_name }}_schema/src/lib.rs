@@ -1,8 +1,8 @@
 pub mod store;
 
-use async_graphql::{Context, EmptySubscription, ID, Object, Result, Schema};
+use async_graphql::{Context, EmptySubscription, Object, Result, Schema, ID};
 
-pub use store::{Store, {{ PrefixName }}};
+pub use store::{{ "{" }}{{ PrefixName }}, Store};
 
 pub type {{ PrefixName }}{{ SuffixName }}Schema = Schema<QueryRoot, MutationRoot, EmptySubscription>;
 
@@ -30,23 +30,14 @@ pub struct MutationRoot;
 
 #[Object]
 impl MutationRoot {
-    async fn create_{{ prefix_name }}(
-        &self,
-        ctx: &Context<'_>,
-        display_name: String,
-    ) -> Result<{{ PrefixName }}> {
+    async fn create_{{ prefix_name }}(&self, ctx: &Context<'_>, display_name: String) -> Result<{{ PrefixName }}> {
         ctx.data_unchecked::<Store>()
             .create(&display_name)
             .await
             .map_err(store_err)
     }
 
-    async fn update_{{ prefix_name }}(
-        &self,
-        ctx: &Context<'_>,
-        id: ID,
-        display_name: String,
-    ) -> Result<Option<{{ PrefixName }}>> {
+    async fn update_{{ prefix_name }}(&self, ctx: &Context<'_>, id: ID, display_name: String) -> Result<Option<{{ PrefixName }}>> {
         ctx.data_unchecked::<Store>()
             .update(&id, &display_name)
             .await
