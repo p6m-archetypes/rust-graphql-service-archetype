@@ -2,9 +2,9 @@ pub mod store;
 
 use async_graphql::{Context, EmptySubscription, Object, Result, Schema, ID};
 
-pub use store::{{ "{" }}{{ PrefixName }}, Store};
+pub use store::{{ "{" }}{{ EntityName }}, Store};
 
-pub type {{ PrefixName }}{{ SuffixName }}Schema = Schema<QueryRoot, MutationRoot, EmptySubscription>;
+pub type {{ ProjectName }}Schema = Schema<QueryRoot, MutationRoot, EmptySubscription>;
 
 fn store_err(err: anyhow::Error) -> async_graphql::Error {
     tracing::error!("store error: {err:#}");
@@ -15,13 +15,13 @@ pub struct QueryRoot;
 
 #[Object]
 impl QueryRoot {
-    /// Fetch a single {{ PrefixName }} by id.
-    async fn {{ prefix_name }}(&self, ctx: &Context<'_>, id: ID) -> Result<Option<{{ PrefixName }}>> {
+    /// Fetch a single {{ EntityName }} by id.
+    async fn {{ entity_name }}(&self, ctx: &Context<'_>, id: ID) -> Result<Option<{{ EntityName }}>> {
         ctx.data_unchecked::<Store>().get(&id).await.map_err(store_err)
     }
 
-    /// List all {{ PrefixName }}s.
-    async fn {{ prefix_name }}s(&self, ctx: &Context<'_>) -> Result<Vec<{{ PrefixName }}>> {
+    /// List all {{ EntityName }}s.
+    async fn {{ entity_name }}s(&self, ctx: &Context<'_>) -> Result<Vec<{{ EntityName }}>> {
         ctx.data_unchecked::<Store>().list().await.map_err(store_err)
     }
 }
@@ -30,21 +30,21 @@ pub struct MutationRoot;
 
 #[Object]
 impl MutationRoot {
-    async fn create_{{ prefix_name }}(&self, ctx: &Context<'_>, display_name: String) -> Result<{{ PrefixName }}> {
+    async fn create_{{ entity_name }}(&self, ctx: &Context<'_>, display_name: String) -> Result<{{ EntityName }}> {
         ctx.data_unchecked::<Store>()
             .create(&display_name)
             .await
             .map_err(store_err)
     }
 
-    async fn update_{{ prefix_name }}(&self, ctx: &Context<'_>, id: ID, display_name: String) -> Result<Option<{{ PrefixName }}>> {
+    async fn update_{{ entity_name }}(&self, ctx: &Context<'_>, id: ID, display_name: String) -> Result<Option<{{ EntityName }}>> {
         ctx.data_unchecked::<Store>()
             .update(&id, &display_name)
             .await
             .map_err(store_err)
     }
 
-    async fn delete_{{ prefix_name }}(&self, ctx: &Context<'_>, id: ID) -> Result<bool> {
+    async fn delete_{{ entity_name }}(&self, ctx: &Context<'_>, id: ID) -> Result<bool> {
         ctx.data_unchecked::<Store>().delete(&id).await.map_err(store_err)
     }
 }

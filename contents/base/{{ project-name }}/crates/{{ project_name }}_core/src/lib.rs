@@ -13,23 +13,23 @@ use metrics_exporter_prometheus::PrometheusBuilder;
 use settings::CoreSettings;
 
 {% if cache ~= 'None' %}
-use {{ prefix_name }}_{{ suffix_name }}_cache::CachePool;
+use {{ project_name }}_cache::CachePool;
 {% endif %}
 {% if messaging ~= 'None' %}
-use {{ prefix_name }}_{{ suffix_name }}_messaging::MessagingClient;
+use {{ project_name }}_messaging::MessagingClient;
 {% endif %}
 {% if persistence ~= 'None' %}
-use {{ prefix_name }}_{{ suffix_name }}_persistence::PersistencePool;
+use {{ project_name }}_persistence::PersistencePool;
 {% endif %}
-use {{ prefix_name }}_{{ suffix_name }}_schema::{{ "{" }}{{ PrefixName }}{{ SuffixName }}Schema, MutationRoot, QueryRoot, Store};
+use {{ project_name }}_schema::{{ "{" }}{{ ProjectName }}Schema, MutationRoot, QueryRoot, Store};
 
-pub struct {{ PrefixName }}{{ SuffixName }}Core {
-    schema: {{ PrefixName }}{{ SuffixName }}Schema,
+pub struct {{ ProjectName }}Core {
+    schema: {{ ProjectName }}Schema,
     #[allow(dead_code)]
     settings: CoreSettings,
 }
 
-impl {{ PrefixName }}{{ SuffixName }}Core {
+impl {{ ProjectName }}Core {
     pub fn builder({% if persistence ~= 'None' %}db: PersistencePool{% endif %}) -> Builder {
         Builder::new({% if persistence ~= 'None' %}db{% endif %})
     }
@@ -53,7 +53,7 @@ impl {{ PrefixName }}{{ SuffixName }}Core {
 
         // Seed a build-info family so /metrics is meaningful from the first scrape.
         metrics::gauge!(
-            "{{ prefix_name }}_{{ suffix_name }}_build_info",
+            "{{ project_name }}_build_info",
             "version" => env!("CARGO_PKG_VERSION")
         )
         .set(1.0);
@@ -120,7 +120,7 @@ impl Builder {
     }
 
 {% endif %}
-    pub async fn build(self) -> Result<{{ PrefixName }}{{ SuffixName }}Core> {
+    pub async fn build(self) -> Result<{{ ProjectName }}Core> {
         let schema = Schema::build(QueryRoot, MutationRoot, EmptySubscription)
 {% if persistence ~= 'None' %}
             .data(Store::new(self.db))
@@ -135,7 +135,7 @@ impl Builder {
 {% endif %}
             .finish();
 
-        Ok({{ PrefixName }}{{ SuffixName }}Core {
+        Ok({{ ProjectName }}Core {
             schema,
             settings: self.settings,
         })
@@ -143,7 +143,7 @@ impl Builder {
 }
 
 async fn graphql_handler(
-    State(schema): State<{{ PrefixName }}{{ SuffixName }}Schema>,
+    State(schema): State<{{ ProjectName }}Schema>,
     req: axum::Json<async_graphql::Request>,
 ) -> axum::Json<async_graphql::Response> {
     axum::Json(schema.execute(req.0).await)

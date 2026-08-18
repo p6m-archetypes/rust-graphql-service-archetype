@@ -1,10 +1,10 @@
 [package]
-name = "{{ prefix_name }}_{{ suffix_name }}_schema"
+name = "{{ project_name }}_schema"
 version.workspace = true
 edition.workspace = true
 
 [dependencies]
-{% if persistence ~= 'None' %}{{ prefix_name }}_{{ suffix_name }}_persistence = { path = "../{{ prefix_name }}_{{ suffix_name }}_persistence" }
+{% if persistence ~= 'None' %}{{ project_name }}_persistence = { path = "../{{ project_name }}_persistence" }
 {% endif %}
 anyhow = "1"
 async-graphql = { version = "7", features = ["graphiql"] }
