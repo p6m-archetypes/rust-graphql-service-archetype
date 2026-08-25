@@ -1,0 +1,14 @@
+[package]
+name = "{{ project_name }}_schema"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+{% if persistence ~= 'None' %}{{ project_name }}_persistence = { path = "../{{ project_name }}_persistence" }
+{% endif %}
+anyhow = "1"
+async-graphql = { version = "7", features = ["graphiql"] }
+{% if persistence == 'PostgreSQL' %}sqlx = { version = "0.8", features = ["postgres", "runtime-tokio-rustls"] }
+{% endif %}{% if persistence == 'MySQL' %}sqlx = { version = "0.8", features = ["mysql", "runtime-tokio-rustls"] }
+{% endif %}tracing = "0.1"
+uuid = { version = "1", features = ["v4"] }
